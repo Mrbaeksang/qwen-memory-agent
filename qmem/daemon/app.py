@@ -5,6 +5,8 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from qmem.daemon.inject import build_context, recall_for_deps
+from qmem.daemon.manifest import read_dependencies
 from qmem.store.memory import LessonStore
 
 
@@ -33,6 +35,16 @@ def create_app(db_path: str | Path) -> FastAPI:
     @app.get("/recall")
     def recall(q: str, k: int = 10) -> list[dict]:
         return store.recall(q, k)
+
+    @app.post("/events")
+    def events(event: dict) -> dict:
+        name = event.get("event")
+        if name == "SessionStart":
+            deps = read_dependencies(event.get("cwd") or ".")
+            lessons = recall_for_deps(store, deps)
+            context = build_context(lessons)
+            return {"context": context or None}
+        return {}
 
     @app.get("/lessons/{lesson_id}")
     def get_lesson(lesson_id: str) -> dict:
