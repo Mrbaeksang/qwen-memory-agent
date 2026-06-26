@@ -4,13 +4,11 @@ import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+QMEM_HOME = Path.home() / ".qmem"
 DEFAULT_PORT = 8787
 
 
-def load_dotenv(path: Path | None = None) -> None:
-    path = path or (PROJECT_ROOT / ".env")
-    if not path.exists():
-        return
+def _apply_env_file(path: Path) -> None:
     for raw in path.read_text().splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
@@ -19,10 +17,18 @@ def load_dotenv(path: Path | None = None) -> None:
         os.environ.setdefault(key.strip(), value.strip())
 
 
+def load_dotenv(path: Path | None = None) -> None:
+    """첫 번째로 존재하는 .env 를 로드: ~/.qmem/.env → 레포 .env → cwd/.env."""
+    candidates = [path] if path else [QMEM_HOME / ".env", PROJECT_ROOT / ".env", Path.cwd() / ".env"]
+    for candidate in candidates:
+        if candidate and candidate.exists():
+            _apply_env_file(candidate)
+            return
+
+
 def default_db_path() -> Path:
-    p = Path.home() / ".qmem" / "mem.db"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    return p
+    QMEM_HOME.mkdir(parents=True, exist_ok=True)
+    return QMEM_HOME / "mem.db"
 
 
 def port() -> int:

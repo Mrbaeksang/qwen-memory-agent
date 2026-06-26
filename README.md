@@ -117,15 +117,24 @@ TIER 3 룰   AGENTS.md 정적 포인터  ← Aider · Cline · Goose · Warp ...
 
 ---
 
-## 실사용 설치 (Claude Code) — 원스크립트
+## 실사용 설치 (Claude Code)
 
+**PyPI (권장)** — 레포 클론 없이:
+```bash
+uv tool install qwen-memory-agent   # 또는 pipx install qwen-memory-agent
+qmem install                        # 훅 와이어링 + 데몬 기동
+# ~/.qmem/.env 에 QWEN_API_KEY 입력 후: qmem install 재실행(또는 데몬 재기동)
+```
+명령: `qmem install` / `qmem uninstall` / `qmem status` / `qmem daemon` / `qmem hook`
+
+**레포에서(개발)** — 원스크립트:
 ```bash
 git clone https://github.com/Mrbaeksang/qwen-memory-agent && cd qwen-memory-agent
 cp .env.example .env   # QWEN_API_KEY 입력
-./install.sh           # 의존성 + 훅 와이어링 + 데몬 기동까지 한 번에 (idempotent)
+./install.sh           # uv sync + qmem install (idempotent)
 ```
 
-제거: `./uninstall.sh` (메모리는 보존, 완전삭제는 `rm -rf ~/.qmem`).
+제거: `qmem uninstall` (또는 `./uninstall.sh`). 메모리 완전삭제는 `rm -rf ~/.qmem`.
 
 데몬은 `127.0.0.1:8787`, 루트 메모리는 `~/.qmem/mem.db`. 이후 모든 Claude Code 세션에서
 SessionStart/UserPromptSubmit 시 관련 교정이 자동 주입되고, PreCompact 시 실수가 수확·검증된다.

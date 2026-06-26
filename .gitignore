@@ -23,3 +23,7 @@ memory_store/
 .DS_Store
 .idea/
 .vscode/
+
+# build artifacts
+dist/
+build/
