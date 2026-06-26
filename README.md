@@ -106,12 +106,14 @@ TIER 3 룰   AGENTS.md 정적 포인터  ← Aider · Cline · Goose · Warp ...
 
 ## 빌드 단계
 
-- [ ] **P1** — SQLite+FTS5 스키마, lesson CRUD/검색 (L2/L3)
-- [ ] **P2** — Claude Code 어댑터: SessionStart/UserPromptSubmit 주입 (세션당 1회)
-- [ ] **P3** — PreCompact 수확 → Verifier(패키지 뜯기 A) → lesson 합성
-- [ ] **P4** — Reflect 점수 루프 + 웹서치 폴백(B) *(차별화 핵심)*
-- [ ] **P5** — 데모 시나리오 + confidence 시각화
+- [x] **P1** — SQLite+FTS5 스키마, lesson CRUD/검색 (L2/L3) — #2 #3
+- [x] **P2** — Claude Code 어댑터: SessionStart/UserPromptSubmit 주입 (세션당 1회) — #5 #6 #7
+- [x] **P3** — PreCompact 수확 → Verifier(패키지 뜯기 A) → lesson 합성 — #8 #9
+- [x] **P4** — Reflect 점수 루프 + 웹서치 폴백(B) *(차별화 핵심)* — #4 #10 #11
+- [x] **P5** — 데모 시나리오 + confidence 시각화 — #12
 - [ ] **P6** — `uvx` 설치기: 자동감지 + 대화형 선택 + 등급별 와이어링 *(코어 이후)*
+
+> 코어(P1~P5) 구현 완료 — `uv run pytest` 50 passed, `uv run python demo/run_demo.py`로 크로스세션 학습 데모 실행.
 
 ---
 
