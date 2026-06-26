@@ -4,6 +4,12 @@
 > 낡은 학습지식 때문에 라이브러리 실수를 반복하는 코딩 에이전트를, **쓸수록 정확해지게** 만드는
 > host-agnostic 자가교정 메모리. Qwen Cloud 기반.
 
+[![PyPI](https://img.shields.io/pypi/v/qwen-memory-agent)](https://pypi.org/project/qwen-memory-agent/)
+
+```bash
+uv tool install qwen-memory-agent && qmem install   # macOS / Claude Code
+```
+
 ---
 
 ## 문제
@@ -47,7 +53,8 @@ HOSTS (결정은 얘들이, 메모리에 무개입)
 ⑤REFLECT  결과신호(테스트통과/실패) → score 갱신 → 도태/우선주입 ↺①
 ```
 
-`score = confidence × recency_decay(last_used) × success/(success+fail+1)`
+`score = confidence × recency_decay(last_used) × (success+1)/(success+fail+2)`
+*(reliability는 Beta(1,1) 평활 — 신규 0.5에서 성공↑/실패↓ 양방향 이동. 원식 `success/(s+f+1)`은 신규가 0이 되는 퇴화가 있어 보정.)*
 
 ---
 
@@ -64,18 +71,19 @@ HOSTS (결정은 얘들이, 메모리에 무개입)
 
 ---
 
-## 멀티플랫폼 — 자동감지 + 등급별 통합
+## 멀티플랫폼
 
-설치기 `uvx qwen-memory init`이 설정경로를 스캔해 깔린 플랫폼을 감지하고, 대화형으로 적용 대상을
-고른 뒤 등급별로 와이어링한다. 등급:
+**현재 구현**: `qmem install`이 Claude Code(Tier1) 훅(SessionStart/UserPromptSubmit/PreCompact/
+SessionEnd)을 와이어링한다 — 풀루프 동작. 데몬은 플랫폼 중립(HTTP)이라 다른 호스트는 어댑터만 추가.
+
+**로드맵(설계)**: 설정경로 스캔으로 깔린 플랫폼 자동감지 + 대화형 선택 + 등급별 와이어링.
+플랫폼마다 통합 가능 등급이 다르다:
 
 ```
-TIER 1 훅   풀루프(자동주입+수확)  ← Claude Code · Gemini CLI · Cursor · Copilot CLI · Kiro
+TIER 1 훅   풀루프(자동주입+수확)  ← Claude Code [구현] · Gemini CLI · Cursor · Copilot CLI · Kiro
 TIER 2 MCP  recall을 MCP 툴 노출   ← Zed · OpenCode · VS Code Copilot · JetBrains ...
 TIER 3 룰   AGENTS.md 정적 포인터  ← Aider · Cline · Goose · Warp ...
 ```
-
-해커톤 데모는 **Claude Code(Tier1)** 레퍼런스로 풀루프를 완성형으로 시연.
 
 ---
 
@@ -111,9 +119,9 @@ TIER 3 룰   AGENTS.md 정적 포인터  ← Aider · Cline · Goose · Warp ...
 - [x] **P3** — PreCompact 수확 → Verifier(패키지 뜯기 A) → lesson 합성 — #8 #9
 - [x] **P4** — Reflect 점수 루프 + 웹서치 폴백(B) *(차별화 핵심)* — #4 #10 #11
 - [x] **P5** — 데모 시나리오 + confidence 시각화 — #12
-- [~] **P6** — 설치기: Claude Code(Tier1) 훅 와이어링 + launchd 데몬 완료 / 멀티플랫폼 자동감지·대화형은 다음
+- [~] **P6** — 설치기: Claude Code(Tier1) 훅 + launchd 데몬 + `qmem` CLI + **PyPI 배포** 완료 / 멀티플랫폼 자동감지·대화형은 다음
 
-> 코어(P1~P5) 구현 완료 — `uv run pytest` 51 passed, `uv run python demo/run_demo.py`로 크로스세션 학습 데모 실행.
+> 코어(P1~P5) 구현 완료 · **PyPI v0.1.0 배포** · `uv run pytest` **52 passed** · `uv run python demo/run_demo.py`로 크로스세션 학습 데모 실행.
 
 ---
 
@@ -138,7 +146,15 @@ cp .env.example .env   # QWEN_API_KEY 입력
 
 데몬은 `127.0.0.1:8787`, 루트 메모리는 `~/.qmem/mem.db`. 이후 모든 Claude Code 세션에서
 SessionStart/UserPromptSubmit 시 관련 교정이 자동 주입되고, PreCompact 시 실수가 수확·검증된다.
-LLM 키는 프로젝트 `.env`(`QWEN_API_KEY`)에서 로드한다. (현재 macOS/launchd 기준)
+LLM 키는 `~/.qmem/.env`(`QWEN_API_KEY`)에서 로드한다(레포 개발 시 레포 `.env`도 폴백). 현재 macOS/launchd 기준.
+
+### 개발 / 테스트
+
+```bash
+uv sync && uv run pytest      # 52 tests (Seam1 데몬 HTTP API + Seam2 어댑터 contract)
+uv run python demo/run_demo.py   # 오프라인 크로스세션 데모 (네트워크 0)
+```
+릴리스: `pyproject.toml` 버전 올리고 `git tag vX.Y.Z && git push origin vX.Y.Z` → GitHub Actions(OIDC)가 PyPI 발행.
 
 ---
 
