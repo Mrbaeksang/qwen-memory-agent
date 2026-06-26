@@ -1,0 +1,18 @@
+name: Publish to PyPI
+
+# v* 태그를 푸시하면 빌드 후 PyPI에 발행 (Trusted Publishing / OIDC, 토큰 불필요)
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # OIDC trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv build
+      - run: uv publish   # OIDC 신뢰 발행 — API 토큰 없이 업로드
