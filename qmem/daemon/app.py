@@ -23,6 +23,8 @@ class LessonIn(BaseModel):
 def create_app(db_path: str | Path) -> FastAPI:
     app = FastAPI()
     store = LessonStore(Path(db_path))
+    # 세션당 1회 주입 보증: session_id -> 이미 주입한 lesson_id 집합
+    injected: dict[str, set[str]] = {}
 
     @app.post("/lessons", status_code=201)
     def create_lesson(lesson: LessonIn) -> dict:
@@ -44,6 +46,18 @@ def create_app(db_path: str | Path) -> FastAPI:
             lessons = recall_for_deps(store, deps)
             context = build_context(lessons)
             return {"context": context or None}
+        if name == "UserPromptSubmit":
+            sid = event.get("session_id") or ""
+            lessons = store.recall(event.get("prompt") or "")
+            already = injected.setdefault(sid, set())
+            fresh = [lesson for lesson in lessons if lesson["id"] not in already]
+            for lesson in fresh:
+                already.add(lesson["id"])
+            context = build_context(fresh)
+            return {"context": context or None}
+        if name == "SessionEnd":
+            injected.pop(event.get("session_id") or "", None)
+            return {}
         return {}
 
     @app.get("/lessons/{lesson_id}")
