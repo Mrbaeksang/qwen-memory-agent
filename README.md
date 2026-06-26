@@ -111,9 +111,23 @@ TIER 3 룰   AGENTS.md 정적 포인터  ← Aider · Cline · Goose · Warp ...
 - [x] **P3** — PreCompact 수확 → Verifier(패키지 뜯기 A) → lesson 합성 — #8 #9
 - [x] **P4** — Reflect 점수 루프 + 웹서치 폴백(B) *(차별화 핵심)* — #4 #10 #11
 - [x] **P5** — 데모 시나리오 + confidence 시각화 — #12
-- [ ] **P6** — `uvx` 설치기: 자동감지 + 대화형 선택 + 등급별 와이어링 *(코어 이후)*
+- [~] **P6** — 설치기: Claude Code(Tier1) 훅 와이어링 + launchd 데몬 완료 / 멀티플랫폼 자동감지·대화형은 다음
 
-> 코어(P1~P5) 구현 완료 — `uv run pytest` 50 passed, `uv run python demo/run_demo.py`로 크로스세션 학습 데모 실행.
+> 코어(P1~P5) 구현 완료 — `uv run pytest` 51 passed, `uv run python demo/run_demo.py`로 크로스세션 학습 데모 실행.
+
+---
+
+## 실사용 설치 (Claude Code)
+
+```bash
+uv sync                                        # 의존성
+uv run python installer/install_claude_code.py # ~/.claude/settings.json 훅 가산 병합(백업) + launchd plist
+launchctl load ~/Library/LaunchAgents/com.qmem.daemon.plist   # 데몬 영속 기동
+```
+
+데몬은 `127.0.0.1:8787`, 루트 메모리는 `~/.qmem/mem.db`. 이후 모든 Claude Code 세션에서
+SessionStart/UserPromptSubmit 시 관련 교정이 자동 주입되고, PreCompact 시 실수가 수확·검증된다.
+LLM 키는 프로젝트 `.env`(`QWEN_API_KEY`)에서 로드한다.
 
 ---
 

@@ -67,7 +67,7 @@ def _default_poster(base_url: str) -> Poster:
     import httpx
 
     def post(path: str, event: dict) -> dict:
-        resp = httpx.post(base_url + path, json=event, timeout=5)
+        resp = httpx.post(base_url + path, json=event, timeout=3)
         resp.raise_for_status()
         return resp.json() if resp.content else {}
 
@@ -75,8 +75,15 @@ def _default_poster(base_url: str) -> Poster:
 
 
 def main() -> None:  # pragma: no cover - CLI 진입점
-    base_url = "http://127.0.0.1:8787"
+    import os
+
+    port = os.environ.get("QMEM_PORT", "8787")
+    base_url = f"http://127.0.0.1:{port}"
     result = run(sys.stdin.read(), _default_poster(base_url))
     if result.stdout:
         sys.stdout.write(result.stdout)
     sys.exit(result.exit_code)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
