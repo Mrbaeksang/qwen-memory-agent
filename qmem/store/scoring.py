@@ -1,9 +1,10 @@
 """회상 점수 — score = confidence × recency_decay × reliability.
 
-reliability는 문서의 success/(success+fail+1)을 Laplace 평활한
-(success+1)/(success+fail+1) 형태를 쓴다. 원식은 신규 lesson(success=0)에서
-0이 되어 갓 수확한 교훈이 영영 회상되지 않는 퇴화가 있어 이를 보정한다.
-신규=1.0, 실패 누적 시 하락, 성공 누적 시 1.0 유지.
+reliability는 문서의 success/(success+fail+1) 대신 Beta(1,1) 평활인
+(success+1)/(success+fail+2)를 쓴다. 원식은 신규 lesson(success=0)에서 0이 되어
+갓 수확한 교훈이 영영 회상되지 않는 퇴화가 있다. 평활식은 신규=0.5에서 출발해
+성공 누적 시 1.0으로 상승, 실패 누적 시 0.0으로 하락 — 양방향으로 움직여
+"쓸수록 정확해짐"을 점수로 드러낸다.
 """
 
 from datetime import datetime, timezone
@@ -23,7 +24,7 @@ def recency_decay(last_used: str | None, created_at: str, now: datetime | None =
 
 
 def reliability(success_count: int, fail_count: int) -> float:
-    return (success_count + 1) / (success_count + fail_count + 1)
+    return (success_count + 1) / (success_count + fail_count + 2)
 
 
 def score(lesson: dict, now: datetime | None = None) -> float:
