@@ -15,6 +15,7 @@ class LessonIn(BaseModel):
     snippet: str | None = None
     source: str | None = None
     scope: str = "global"
+    confidence: float = 0.7
 
 
 def create_app(db_path: str | Path) -> FastAPI:
@@ -28,6 +29,10 @@ def create_app(db_path: str | Path) -> FastAPI:
     @app.get("/lessons")
     def list_lessons() -> list[dict]:
         return store.list_all()
+
+    @app.get("/recall")
+    def recall(q: str, k: int = 10) -> list[dict]:
+        return store.recall(q, k)
 
     @app.get("/lessons/{lesson_id}")
     def get_lesson(lesson_id: str) -> dict:
