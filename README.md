@@ -117,17 +117,19 @@ TIER 3 룰   AGENTS.md 정적 포인터  ← Aider · Cline · Goose · Warp ...
 
 ---
 
-## 실사용 설치 (Claude Code)
+## 실사용 설치 (Claude Code) — 원스크립트
 
 ```bash
-uv sync                                        # 의존성
-uv run python installer/install_claude_code.py # ~/.claude/settings.json 훅 가산 병합(백업) + launchd plist
-launchctl load ~/Library/LaunchAgents/com.qmem.daemon.plist   # 데몬 영속 기동
+git clone https://github.com/Mrbaeksang/qwen-memory-agent && cd qwen-memory-agent
+cp .env.example .env   # QWEN_API_KEY 입력
+./install.sh           # 의존성 + 훅 와이어링 + 데몬 기동까지 한 번에 (idempotent)
 ```
+
+제거: `./uninstall.sh` (메모리는 보존, 완전삭제는 `rm -rf ~/.qmem`).
 
 데몬은 `127.0.0.1:8787`, 루트 메모리는 `~/.qmem/mem.db`. 이후 모든 Claude Code 세션에서
 SessionStart/UserPromptSubmit 시 관련 교정이 자동 주입되고, PreCompact 시 실수가 수확·검증된다.
-LLM 키는 프로젝트 `.env`(`QWEN_API_KEY`)에서 로드한다.
+LLM 키는 프로젝트 `.env`(`QWEN_API_KEY`)에서 로드한다. (현재 macOS/launchd 기준)
 
 ---
 
