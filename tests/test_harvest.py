@@ -13,6 +13,14 @@ def test_harvest_extracts_candidates_from_transcript():
     assert out == candidates
 
 
+def test_harvest_tolerates_markdown_fenced_json():
+    candidates = [{"tech": "pydantic", "wrong": "BaseSettings import", "context": "config"}]
+    fenced = "```json\n" + json.dumps(candidates) + "\n```"
+    provider = FakeProvider(completion=fenced)
+
+    assert harvest("some session\nImportError: boom", provider) == candidates
+
+
 def test_harvest_invalid_json_returns_empty():
     provider = FakeProvider(completion="sorry, no JSON here")
 

@@ -35,6 +35,12 @@ def extract_errors(transcript_text: str) -> list[str]:
     ]
 
 
+def _slice_json_array(raw: str) -> str:
+    """실제 LLM이 ```json 펜스나 산문으로 감싸 주는 경우를 견뎌 배열만 추출."""
+    start, end = raw.find("["), raw.rfind("]")
+    return raw[start : end + 1] if start != -1 and end > start else raw
+
+
 def harvest(transcript_text: str, provider) -> list[dict]:
     if not transcript_text.strip():
         return []
@@ -46,7 +52,7 @@ def harvest(transcript_text: str, provider) -> list[dict]:
         model=provider.config.extract_model,
     )
     try:
-        data = json.loads(raw)
+        data = json.loads(_slice_json_array(raw))
     except Exception:
         return []
     return data if isinstance(data, list) else []
