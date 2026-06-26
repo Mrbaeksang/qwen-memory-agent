@@ -108,11 +108,13 @@ class FakeProvider(Provider):
         self,
         *,
         completion: str = "",
+        by_model: dict[str, str] | None = None,
         rerank_order: list[int] | None = None,
         supports_rerank: bool = True,
         supports_web_search: bool = True,
     ):
         self._completion = completion
+        self._by_model = by_model or {}
         self._rerank_order = rerank_order
         self.calls: list[dict] = []
         self.config = ProviderConfig(
@@ -126,6 +128,8 @@ class FakeProvider(Provider):
 
     def complete(self, prompt: str, *, model: str | None = None, web_search: bool = False) -> str:
         self.calls.append({"prompt": prompt, "model": model, "web_search": web_search})
+        if model in self._by_model:
+            return self._by_model[model]
         return self._completion
 
     def rerank(self, query: str, documents: list[str], top_n: int | None = None) -> list[int]:

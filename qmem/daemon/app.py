@@ -10,6 +10,7 @@ from qmem.daemon.inject import build_context, recall_for_deps
 from qmem.daemon.manifest import read_dependencies
 from qmem.llm.provider import QwenProvider
 from qmem.store.memory import LessonStore
+from qmem.verify.verifier import verify_and_store
 
 
 class LessonIn(BaseModel):
@@ -31,8 +32,10 @@ def create_app(db_path: str | Path, provider=None) -> FastAPI:
     # PreCompact가 수확한 미검증 후보 (S8 Verify가 소비)
     pending: list[dict] = []
 
-    def _harvest_job(transcript_path: str | None) -> None:
-        pending.extend(harvest(read_transcript(transcript_path), provider))
+    def _harvest_job(transcript_path: str | None, cwd: str | None) -> None:
+        candidates = harvest(read_transcript(transcript_path), provider)
+        pending.extend(candidates)
+        verify_and_store(candidates, [cwd or "."], provider, store)
 
     @app.post("/lessons", status_code=201)
     def create_lesson(lesson: LessonIn) -> dict:
@@ -55,7 +58,9 @@ def create_app(db_path: str | Path, provider=None) -> FastAPI:
         name = event.get("event")
         if name == "PreCompact":
             # 비동기로 처리해 호스트 응답을 막지 않음
-            background_tasks.add_task(_harvest_job, event.get("transcript_path"))
+            background_tasks.add_task(
+                _harvest_job, event.get("transcript_path"), event.get("cwd")
+            )
             return {}
         if name == "SessionStart":
             deps = read_dependencies(event.get("cwd") or ".")

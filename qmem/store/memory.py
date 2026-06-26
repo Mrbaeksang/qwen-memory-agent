@@ -104,6 +104,13 @@ class LessonStore:
         )
         self._conn.commit()
 
+    def supersede(self, trigger: str) -> None:
+        """같은 trigger의 기존 활성 Lesson을 stale 처리(새 검증이 옛것을 대체)."""
+        self._conn.execute(
+            "UPDATE lessons SET stale = 1 WHERE trigger = ? AND stale = 0", (trigger,)
+        )
+        self._conn.commit()
+
     def set_archived(self, lesson_id: str, archived: bool = True) -> None:
         self._conn.execute(
             "UPDATE lessons SET archived = ? WHERE id = ?", (int(archived), lesson_id)
