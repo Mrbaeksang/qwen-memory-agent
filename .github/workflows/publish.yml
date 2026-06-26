@@ -11,6 +11,7 @@ jobs:
     environment: pypi
     permissions:
       id-token: write   # OIDC trusted publishing
+      contents: read    # private repo checkout (permissions 블록 선언 시 명시 필요)
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
