@@ -5,6 +5,9 @@ from pathlib import Path
 
 ERROR_MARKERS = ("Error", "Traceback", "Exception", "error:")
 
+# 토큰 폭주 방지: 긴 세션(최대 1M)의 전체 transcript를 보내지 않고 최근 꼬리만.
+MAX_TRANSCRIPT_CHARS = 16000
+
 HARVEST_INSTRUCTION = (
     "Extract library/API usage mistakes from this coding session transcript. "
     "Return a JSON array of objects with keys: tech, wrong, context. "
@@ -35,6 +38,7 @@ def extract_errors(transcript_text: str) -> list[str]:
 def harvest(transcript_text: str, provider) -> list[dict]:
     if not transcript_text.strip():
         return []
+    transcript_text = transcript_text[-MAX_TRANSCRIPT_CHARS:]
     errors = extract_errors(transcript_text)
     focus = ("\n\nERROR LINES (focus here):\n" + "\n".join(errors)) if errors else ""
     raw = provider.complete(

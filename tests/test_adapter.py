@@ -1,6 +1,21 @@
 import json
+import subprocess
+import sys
 
 from qmem.adapters.claude_code import run
+
+
+def test_adapter_module_runs_as_main_failsafe():
+    # __main__ 가드가 연결돼 있어야 `-m` 실행이 동작한다 (회귀 방지)
+    proc = subprocess.run(
+        [sys.executable, "-m", "qmem.adapters.claude_code"],
+        input="not json",
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert proc.returncode == 0
+    assert proc.stdout == ""
 
 
 def make_poster(response=None, raises=False):
