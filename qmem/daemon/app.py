@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from qmem.daemon.harvest import harvest, read_transcript
 from qmem.daemon.inject import build_context, recall_for_deps
 from qmem.daemon.manifest import read_dependencies
+from qmem.daemon.reflect import apply_result
 from qmem.llm.provider import QwenProvider
 from qmem.store.memory import LessonStore
 from qmem.verify.verifier import verify_and_store
@@ -76,6 +77,9 @@ def create_app(db_path: str | Path, provider=None) -> FastAPI:
                 already.add(lesson["id"])
             context = build_context(fresh)
             return {"context": context or None}
+        if name == "Outcome":
+            lesson = apply_result(store, event.get("lesson_id"), bool(event.get("success")))
+            return {"lesson": lesson}
         if name == "SessionEnd":
             injected.pop(event.get("session_id") or "", None)
             return {}
