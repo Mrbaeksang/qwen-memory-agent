@@ -1,8 +1,8 @@
-"""Claude Code 어댑터 contract shim (Tier 1).
+"""Claude Code adapter contract shim (Tier 1).
 
-호스트 훅 stdin(JSON)을 표준 이벤트로 데몬에 POST하고, 데몬 응답을
-Claude Code 훅 출력(additionalContext)으로 변환한다. 도메인 로직 없음.
-데몬/입력 오류는 절대 호스트 세션을 깨뜨리지 않는다(fail-safe: 빈 출력, exit 0).
+POST the host hook's stdin (JSON) to the daemon as a standard event, and turn the daemon's
+response into Claude Code hook output (additionalContext). No domain logic. Daemon/input
+errors must never break the host session (fail-safe: empty output, exit 0).
 """
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ import sys
 from dataclasses import dataclass
 from typing import Callable
 
-# 컨텍스트를 주입하는 이벤트 (그 외는 fire-and-forget)
+# events that inject context (the rest are fire-and-forget)
 INJECTING_EVENTS = {"SessionStart", "UserPromptSubmit"}
 
-# POST 시그니처: (path, event_dict) -> response_dict
+# POST signature: (path, event_dict) -> response_dict
 Poster = Callable[[str, dict], dict]
 
 
@@ -39,13 +39,13 @@ def run(stdin_text: str, post: Poster) -> AdapterResult:
     try:
         payload = json.loads(stdin_text)
     except Exception:
-        return AdapterResult("", 0)  # 깨진 입력도 세션을 막지 않음
+        return AdapterResult("", 0)  # malformed input must not block the session either
 
     event = _to_event(payload)
     try:
         resp = post("/events", event) or {}
     except Exception:
-        return AdapterResult("", 0)  # 데몬 다운 → 빈 컨텍스트로 통과
+        return AdapterResult("", 0)  # daemon down → pass through with empty context
 
     if event["event"] in INJECTING_EVENTS:
         context = resp.get("context")
@@ -74,7 +74,7 @@ def _default_poster(base_url: str) -> Poster:
     return post
 
 
-def main() -> None:  # pragma: no cover - CLI 진입점
+def main() -> None:  # pragma: no cover - CLI entrypoint
     import os
 
     port = os.environ.get("QMEM_PORT", "8787")

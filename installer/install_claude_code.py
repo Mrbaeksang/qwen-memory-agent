@@ -1,4 +1,4 @@
-"""(하위호환 셰임) — 이제 설치 로직은 `qmem install` (qmem.setup_hooks)에 있다."""
+"""(backward-compat shim) — install logic now lives in `qmem install` (qmem.setup_hooks)."""
 
 from qmem.setup_hooks import install
 

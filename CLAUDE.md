@@ -1,6 +1,6 @@
 # Qwen MemoryAgent
 
-쓸수록 정확해지는(self-improving) 영속 메모리 에이전트. Qwen Cloud 기반. 자세한 설계는 `README.md` 참고.
+A self-improving persistent memory agent that gets more accurate with use. Powered by Qwen Cloud. See `README.md` for the design.
 
 ## Agent skills
 

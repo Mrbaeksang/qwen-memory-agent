@@ -1,4 +1,4 @@
-"""점수 시각화 — 학습 중임을 막대로 증명."""
+"""Score visualization — prove it's learning with bars."""
 
 from qmem.store.scoring import score
 
@@ -17,7 +17,7 @@ def render_confidence_bars(lessons: list[dict]) -> str:
 
 
 def render_score_bars(lessons: list[dict]) -> str:
-    """효과 점수(success/fail 반영)를 막대로 — 성공↑/실패↓가 눈에 보인다."""
+    """Effective score (reflecting success/fail) as bars — success↑/fail↓ is visible."""
     return "\n".join(
         f"{lesson['trigger']:30.30} {confidence_bar(score(lesson))}" for lesson in lessons
     )

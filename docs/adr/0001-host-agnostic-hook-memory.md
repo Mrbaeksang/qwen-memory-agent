@@ -1,34 +1,44 @@
-# ADR-0001 — Host-agnostic 훅 기반 자가교정 메모리
+# ADR-0001 — Host-agnostic hook-based self-correcting memory
 
-- 상태: accepted
-- 날짜: 2026-06-26
+- Status: accepted
+- Date: 2026-06-26
 
-## 맥락
+## Context
 
-초안(README v1)은 "Qwen이 인라인 결정을 내리는 메모리 에이전트"였다. 그러나 목표 효용을
-재정의하면서 다음이 드러났다:
+The first draft (README v1) was "a memory agent where Qwen makes the inline decision".
+Re-defining the target value surfaced the following:
 
-- 1차 소비자는 **로컬에 설치되어 어떤 코딩 플랫폼(Claude Code/Codex/Qwen Code/Cursor 등)이든
-  공유하는 메모리**. 따라서 인라인 결정은 호스트 LLM이 한다 — 메모리가 결정하지 않는다.
-- 호스트가 **의식적으로 개입(도구 호출)하지 않아도** 자동 주입/수집되어야 한다.
-- 해결할 진짜 문제: AI의 **낡은 학습지식 + 웹서치 미동봉**으로 생기는 라이브러리/API 실수.
-  한 세션에서 교정해도 **다른 세션은 그걸 모른다.**
-- prior art(claude-mem, agentmemory, context-mode)가 이미 "훅 기반 host-agnostic 공용 메모리"
-  플러밍을 해결해 두었다. 거기서는 이길 수 없다.
+- The primary consumer is a **memory installed locally and shared by any coding platform**
+  (Claude Code / Codex / Qwen Code / Cursor ...). So the inline decision is made by the host
+  LLM — the memory does not decide.
+- It must auto-inject/collect **without the host consciously intervening** (no tool calls).
+- The real problem to solve: library/API mistakes caused by the agent's **stale training
+  knowledge + lack of built-in web search**. Even after a fix in one session, **other sessions
+  don't know.**
+- Prior art (claude-mem, agentmemory, context-mode) already solved the "hook-based
+  host-agnostic shared memory" plumbing. We can't win there.
 
-## 결정
+## Decision
 
-1. **역할 재정의**: 호스트=결정자, 본 프로젝트=메모리 서빙/수집, Qwen=메모리 지능(추출/검증/reflect/rerank).
-2. **통합은 라이프사이클 훅으로(무개입)**. MCP는 훅 없는 플랫폼의 차선(Tier2).
-3. **수확 트리거 = PreCompact** (모든 주요 플랫폼이 compact 지원, 디테일 소실 직전 타이밍).
-4. **검증 = 설치 패키지 뜯기(A) 우선 + 웹서치(B) 폴백** — 디스크의 실제 버전이 정답 출처.
-5. **수확/결과 신호 = 런타임 에러** (수확 후보 좁히기 + reflect 결과귀속을 겸함).
-6. **모델 비종속**: OpenAI 호환 추상화, **Qwen 기본값**. qwen3-rerank/enable_search는 Qwen 우대.
-7. **차별점 집중**: ① 패키지-검증 ② 점수형 자가교정. 플러밍은 prior art 차용.
-8. **해커톤 스코프**: Claude Code(Tier1) 레퍼런스로 풀루프 시연. 멀티플랫폼 설치기는 코어 이후.
+1. **Redefine roles**: host = decision-maker, this project = memory serving/collection,
+   Qwen = memory intelligence (extract/verify/reflect/rerank).
+2. **Integrate via lifecycle hooks (invisible)**. MCP is the fallback for hook-less platforms (Tier 2).
+3. **Harvest trigger = PreCompact** (every major platform supports compaction; it's the moment
+   right before detail is lost).
+4. **Verify = read installed package (A) primary + web search (B) fallback** — the on-disk
+   version is the source of truth.
+5. **Harvest/outcome signal = runtime errors** (narrows harvest candidates AND serves as the
+   reflect outcome signal).
+6. **Provider-agnostic**: OpenAI-compatible abstraction, **Qwen by default**. qwen3-rerank /
+   enable_search are Qwen advantages.
+7. **Focus the wedge**: ① package verification ② scored self-correction. Reuse prior-art plumbing.
+8. **Hackathon scope**: Claude Code (Tier 1) reference for the full loop. Multi-platform
+   installer comes after the core.
 
-## 결과
+## Consequences
 
-- "쓸수록 정확해짐"의 주어가 *호스트가 아니라 공유 메모리*로 바뀐다.
-- Qwen은 인라인 결정을 버리는 대신 **백그라운드 두뇌**로 중심에 남아 트랙 요건을 충족.
-- 약한 고리: 결과 귀속이 인과가 아닌 상관 근사 — 양으로 수렴, 데모는 테스트 신호로 증명.
+- The subject of "gets more accurate with use" shifts from *the host* to *the shared memory*.
+- Qwen drops the inline decision but remains central as the **background brain**, satisfying the
+  track's requirement.
+- Weak link: outcome attribution is correlation, not causation — converges with volume; the
+  demo proves it via the test signal.

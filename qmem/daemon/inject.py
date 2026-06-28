@@ -1,4 +1,4 @@
-"""주입 컨텍스트 빌드 — 의존성 매칭 Lesson 회상 + 토큰캡."""
+"""Build injection context — recall dependency-matched lessons + token cap."""
 
 from qmem.store.scoring import score
 

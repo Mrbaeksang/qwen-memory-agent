@@ -1,4 +1,4 @@
-"""데몬 HTTP API (Seam 1) — Lesson 저장/조회 경계."""
+"""Daemon HTTP API (Seam 1) — the Lesson store/recall boundary."""
 
 from pathlib import Path
 
@@ -28,9 +28,9 @@ def create_app(db_path: str | Path, provider=None) -> FastAPI:
     app = FastAPI()
     store = LessonStore(Path(db_path))
     provider = provider or QwenProvider()
-    # 세션당 1회 주입 보증: session_id -> 이미 주입한 lesson_id 집합
+    # once-per-session guarantee: session_id -> set of already-injected lesson_ids
     injected: dict[str, set[str]] = {}
-    # PreCompact가 수확한 미검증 후보 (S8 Verify가 소비)
+    # unverified candidates harvested by PreCompact (consumed by Verify)
     pending: list[dict] = []
 
     def _harvest_job(transcript_path: str | None, cwd: str | None) -> None:
@@ -58,7 +58,7 @@ def create_app(db_path: str | Path, provider=None) -> FastAPI:
     def events(event: dict, background_tasks: BackgroundTasks) -> dict:
         name = event.get("event")
         if name == "PreCompact":
-            # 비동기로 처리해 호스트 응답을 막지 않음
+            # run asynchronously so the host response isn't blocked
             background_tasks.add_task(
                 _harvest_job, event.get("transcript_path"), event.get("cwd")
             )

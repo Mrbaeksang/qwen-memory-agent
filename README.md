@@ -1,8 +1,8 @@
 # Qwen MemoryAgent
 
 > **Global AI Hackathon Series with Qwen Cloud — Track 1: MemoryAgent**
-> 낡은 학습지식 때문에 라이브러리 실수를 반복하는 코딩 에이전트를, **쓸수록 정확해지게** 만드는
-> host-agnostic 자가교정 메모리. Qwen Cloud 기반.
+> A **self-correcting** memory that stops coding agents from repeating stale-knowledge
+> library mistakes — across sessions and across tools. Powered by Qwen Cloud.
 
 [![PyPI](https://img.shields.io/pypi/v/qwen-memory-agent)](https://pypi.org/project/qwen-memory-agent/)
 
@@ -12,168 +12,204 @@ uv tool install qwen-memory-agent && qmem install   # macOS / Claude Code
 
 ---
 
-## 문제
+## Problem
 
-AI 코딩 에이전트는 **학습된(낡은) 지식**으로 라이브러리/의존성을 다루다 실수한다. 웹서치를
-기본 동봉하지 않으니 최신 API를 모른다. 결정적으로 — **한 세션에서 그 실수를 교정해도
-다음/다른 세션은 그걸 모른다.** 같은 함정에 매번 다시 빠진다.
+AI coding agents reason from **stale training knowledge** and don't web-search by default,
+so they keep using removed/outdated library APIs. The decisive pain: even after you correct
+a mistake once, **the next session — or a different tool — doesn't know.** You fall into the
+same trap again and again.
 
-## 효용
+## What it does
 
-> 네 코딩 에이전트는 웹서치를 안 해서 낡은 API로 틀린다. 이 메모리는 그 실수를 **compact
-> 순간에 잡아 — 디스크에 깔린 실제 버전을 뜯어 정답을 확인해두고 — 모든 플랫폼의 모든 미래
-> 세션에 세션당 1회 자동 주입한다. 틀리면 스스로 도태시킨다.**
+> Your coding agent uses stale APIs because it never web-searches. This memory catches the
+> mistake **at compaction time** — reads the **actually-installed package version on disk** to
+> confirm the fix — and **auto-injects it into every future session, once per session.** Wrong
+> lessons demote and get forgotten.
 
-핵심은 단순 저장이 아니라 **(1) 실수 수확 · (2) 버전-정확 검증 · (3) 무개입 주입 · (4) 자가 교정**.
+The core isn't storage — it's **(1) mistake harvesting · (2) version-exact verification ·
+(3) host-invisible injection · (4) self-correction**.
 
 ---
 
-## 아키텍처 (요약 — 정본은 [`CONTEXT.md`](./CONTEXT.md))
+## Architecture (summary — source of truth in [`CONTEXT.md`](./CONTEXT.md))
+
+```mermaid
+flowchart TB
+    subgraph HOSTS["Coding agent hosts (no manual calls)"]
+        CC["Claude Code"]
+    end
+    subgraph DAEMON["Local daemon · FastAPI (127.0.0.1:8787)"]
+        REC["Recall / Inject (session-once)"]
+        HAR["Harvest (PreCompact, async)"]
+        VER["Verifier — A: installed package / B: web search"]
+        REF["Reflect — score · archive"]
+        DB[("Root memory<br/>SQLite + FTS5")]
+    end
+    QWEN["Qwen Cloud · DashScope<br/>qwen-turbo · qwen-plus(+search) · qwen3-rerank"]
+    DISK["Installed packages<br/>node_modules / site-packages"]
+    CC -- "lifecycle hooks" --> HAR
+    CC -- "lifecycle hooks" --> REC
+    HAR --> VER
+    VER -- "read version+docs" --> DISK
+    VER -- "synthesize" --> QWEN
+    REC -- "rerank" --> QWEN
+    REC & VER & REF --> DB
+    REC -- "additionalContext" --> CC
+```
+
+<details><summary>text version</summary>
 
 ```
-HOSTS (결정은 얘들이, 메모리에 무개입)
+HOSTS (they decide; memory stays invisible)
   Claude Code · Codex · Gemini CLI · Cursor · ...
-       │ 라이프사이클 훅
-  ADAPTER LAYER  (플랫폼별 얇은 훅 스크립트)
+       │ lifecycle hooks
+  ADAPTER LAYER  (thin per-platform hook shims)
        │ HTTP localhost
   LOCAL DAEMON  ── Ingress · Recall · Harvest · Reflect
        ├─ MEMORY STORE  SQLite+FTS5  (~/.qmem/mem.db)
-       │     L1 Curated(항상주입) · L2 Episodic(원문/FTS5) · L3 Scored(lesson/rerank)
-       ├─ Verifier   A:설치패키지 뜯기(우선) / B:웹서치(폴백)
-       └─ LLM Provider  Qwen 기본 (qwen-turbo/plus/qwen3-rerank) · 교체 가능
+       │     L1 Curated(always injected) · L2 Episodic(raw/FTS5) · L3 Scored(lesson/rerank)
+       ├─ Verifier   A: read installed package (primary) / B: web search (fallback)
+       └─ LLM Provider  Qwen by default (qwen-turbo/plus/qwen3-rerank) · pluggable
 ```
+</details>
 
-### 5단계 파이프라인
+### 5-stage pipeline
 
 ```
-①HARVEST  PreCompact 훅 → transcript+에러로그 → qwen-turbo가 실수후보 추출 [async]
-②VERIFY   설치패키지 뜯기(A,우선) → 없으면 웹서치(B) → qwen-plus가 정답=lesson 합성 [async]
-③STORE    lesson + FTS5 인덱싱 + 모순체크(충돌→stale)
-④INJECT   SessionStart/UserPromptSubmit 훅 → 세션당 1회 자동 주입 (LLM 무개입)
-⑤REFLECT  결과신호(테스트통과/실패) → score 갱신 → 도태/우선주입 ↺①
+①HARVEST  PreCompact hook → transcript+error logs → qwen-turbo extracts candidates [async]
+②VERIFY   read installed package (A, primary) → else web search (B) → qwen-plus synthesizes the fix [async]
+③STORE    lesson + FTS5 index + contradiction check (conflict → stale)
+④INJECT   SessionStart/UserPromptSubmit hooks → auto-inject, once per session (LLM-invisible)
+⑤REFLECT  outcome signal (test pass/fail) → update score → archive/prioritize ↺①
 ```
 
 `score = confidence × recency_decay(last_used) × (success+1)/(success+fail+2)`
-*(reliability는 Beta(1,1) 평활 — 신규 0.5에서 성공↑/실패↓ 양방향 이동. 원식 `success/(s+f+1)`은 신규가 0이 되는 퇴화가 있어 보정.)*
+*(reliability uses Beta(1,1) smoothing — new lessons start at 0.5 and move both ways. The
+naive `success/(s+f+1)` degenerates to 0 for new lessons.)*
 
 ---
 
-## 차별점 (vs claude-mem · agentmemory · context-mode)
+## What makes it different (vs claude-mem · agentmemory · context-mode)
 
-기존 툴은 "대화를 압축 저장/주입"까지만 한다. 본 프로젝트의 wedge:
+Existing tools "compress and replay the conversation". Our wedge:
 
-| | 본 프로젝트 | 기존 툴 |
+| | This project | Existing tools |
 |---|---|---|
-| 검증 | **설치 패키지를 직접 뜯어 버전-정확** (환각 0) | 대화 요약 저장 |
-| 학습 | **점수형 Reflect 자가교정** (틀린 lesson 도태) | 없음 |
+| Verification | **reads the installed package — version-exact** (no hallucination) | conversation summary |
+| Learning | **scored Reflect self-correction** (wrong lessons demoted) | none |
 
-플러밍(훅·자동감지·멀티플랫폼)은 prior art 패턴을 차용하고, 시간은 위 둘에 집중.
+The plumbing (hooks, auto-detect, multi-platform) reuses prior-art patterns; our effort
+goes into those two.
 
 ---
 
-## 멀티플랫폼
+## Multi-platform
 
-**현재 구현**: `qmem install`이 Claude Code(Tier1) 훅(SessionStart/UserPromptSubmit/PreCompact/
-SessionEnd)을 와이어링한다 — 풀루프 동작. 데몬은 플랫폼 중립(HTTP)이라 다른 호스트는 어댑터만 추가.
+**Implemented now:** `qmem install` wires Claude Code (Tier 1) hooks (SessionStart /
+UserPromptSubmit / PreCompact / SessionEnd) — full loop. The daemon is platform-neutral
+(HTTP), so other hosts just need an adapter.
 
-**로드맵(설계)**: 설정경로 스캔으로 깔린 플랫폼 자동감지 + 대화형 선택 + 등급별 와이어링.
-플랫폼마다 통합 가능 등급이 다르다:
+**Roadmap:** scan config paths to auto-detect installed platforms + interactive selection +
+tier-based wiring. Integration capability differs per platform:
 
 ```
-TIER 1 훅   풀루프(자동주입+수확)  ← Claude Code [구현] · Gemini CLI · Cursor · Copilot CLI · Kiro
-TIER 2 MCP  recall을 MCP 툴 노출   ← Zed · OpenCode · VS Code Copilot · JetBrains ...
-TIER 3 룰   AGENTS.md 정적 포인터  ← Aider · Cline · Goose · Warp ...
+TIER 1 hooks  full loop (auto-inject + harvest)  ← Claude Code [done] · Gemini CLI · Cursor · Copilot CLI · Kiro
+TIER 2 MCP    expose recall as an MCP tool        ← Zed · OpenCode · VS Code Copilot · JetBrains ...
+TIER 3 rules  static pointer in AGENTS.md         ← Aider · Cline · Goose · Warp ...
 ```
 
 ---
 
-## Qwen 모델 배분 (비종속, Qwen 기본 권장)
+## Qwen models (pluggable, Qwen by default)
 
-| 용도 | 모델 |
+| Use | Model |
 |---|---|
-| 실수 후보 추출 (대량) | `qwen-turbo` |
-| 검증/lesson 합성 (+웹서치) | `qwen-plus` (`enable_search`) |
-| 회상 재정렬 | `qwen3-rerank` |
-| L2 키워드 검색 | LLM 미사용 (FTS5) |
+| Mistake-candidate extraction (bulk) | `qwen-turbo` |
+| Verification / lesson synthesis (+search) | `qwen-plus` (`enable_search`) |
+| Recall reranking | `qwen3-rerank` |
+| L2 keyword search | no LLM (FTS5) |
 
-**Qwen 쓰면 풀스택, 타 프로바이더는 코어(rerank/웹서치 차등).**
-**API**: OpenAI 호환 — `base_url=https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
+**Qwen → full stack; other providers → core only (rerank/web-search degrade).**
+**API**: OpenAI-compatible — `base_url=https://dashscope-intl.aliyuncs.com/compatible-mode/v1`
 
 ---
 
-## 심사 기준 매핑
+## Judging-criteria mapping
 
-| 심사 기준 | 구현 |
+| Criterion | Implementation |
 |---|---|
-| ① 효율 저장/검색 | L2 FTS5(임베딩 0) + L3 점수 랭킹 + qwen3-rerank |
-| ② 적시 망각 | 모순 stale + 점수 감쇠 archive + 용량 통합 |
-| ③ 제한 컨텍스트 회상 | L1 토큰캡 + rerank top-K + 세션당 1회 주입 |
-| **increasingly accurate** | 패키지-검증 + Reflect success/fail 점수 교정 |
+| Efficient storage/retrieval | L2 FTS5 (zero embedding cost) + L3 scored ranking + qwen3-rerank |
+| Timely forgetting | contradiction → stale + score decay → archive + consolidation |
+| Recall within limited context | L1 token cap + rerank top-K + once-per-session injection |
+| **Increasingly accurate** | installed-package verification + Reflect success/fail scoring |
 
 ---
 
-## 빌드 단계
+## Build phases
 
-- [x] **P1** — SQLite+FTS5 스키마, lesson CRUD/검색 (L2/L3) — #2 #3
-- [x] **P2** — Claude Code 어댑터: SessionStart/UserPromptSubmit 주입 (세션당 1회) — #5 #6 #7
-- [x] **P3** — PreCompact 수확 → Verifier(패키지 뜯기 A) → lesson 합성 — #8 #9
-- [x] **P4** — Reflect 점수 루프 + 웹서치 폴백(B) *(차별화 핵심)* — #4 #10 #11
-- [x] **P5** — 데모 시나리오 + confidence 시각화 — #12
-- [~] **P6** — 설치기: Claude Code(Tier1) 훅 + launchd 데몬 + `qmem` CLI + **PyPI 배포** 완료 / 멀티플랫폼 자동감지·대화형은 다음
+- [x] **P1** — SQLite+FTS5 schema, lesson CRUD/recall (L2/L3) — #2 #3
+- [x] **P2** — Claude Code adapter: SessionStart/UserPromptSubmit injection (once per session) — #5 #6 #7
+- [x] **P3** — PreCompact harvest → Verifier (package tearing, A) → lesson synthesis — #8 #9
+- [x] **P4** — Reflect scoring loop + web-search fallback (B) *(the differentiator)* — #4 #10 #11
+- [x] **P5** — demo scenario + confidence visualization — #12
+- [~] **P6** — installer: Claude Code (Tier1) hooks + launchd daemon + `qmem` CLI + **PyPI release** done / multi-platform auto-detect & interactive is next
 
-> 코어(P1~P5) 구현 완료 · **PyPI v0.1.0 배포** · `uv run pytest` **52 passed** · `uv run python demo/run_demo.py`로 크로스세션 학습 데모 실행.
+> Core (P1–P5) complete · **PyPI v0.1.0 released** · `uv run pytest` **52 passed** ·
+> `uv run python demo/run_demo.py` runs the cross-session learning demo.
 
 ---
 
-## 실사용 설치 (Claude Code)
+## Install (Claude Code)
 
-**PyPI (권장)** — 레포 클론 없이:
+**PyPI (recommended)** — no clone needed:
 ```bash
-uv tool install qwen-memory-agent   # 또는 pipx install qwen-memory-agent
-qmem install                        # 훅 와이어링 + 데몬 기동
-# ~/.qmem/.env 에 QWEN_API_KEY 입력 후: qmem install 재실행(또는 데몬 재기동)
+uv tool install qwen-memory-agent   # or: pipx install qwen-memory-agent
+qmem install                        # wire hooks + start daemon
+# put QWEN_API_KEY in ~/.qmem/.env, then: qmem install (re-run) or restart the daemon
 ```
-명령: `qmem install` / `qmem uninstall` / `qmem status` / `qmem daemon` / `qmem hook`
+Commands: `qmem install` / `qmem uninstall` / `qmem status` / `qmem daemon` / `qmem hook`
 
-**레포에서(개발)** — 원스크립트:
+**From the repo (development)** — one script:
 ```bash
 git clone https://github.com/Mrbaeksang/qwen-memory-agent && cd qwen-memory-agent
-cp .env.example .env   # QWEN_API_KEY 입력
+cp .env.example .env   # put in QWEN_API_KEY
 ./install.sh           # uv sync + qmem install (idempotent)
 ```
 
-제거: `qmem uninstall` (또는 `./uninstall.sh`). 메모리 완전삭제는 `rm -rf ~/.qmem`.
+Uninstall: `qmem uninstall` (or `./uninstall.sh`). Wipe memory entirely: `rm -rf ~/.qmem`.
 
-데몬은 `127.0.0.1:8787`, 루트 메모리는 `~/.qmem/mem.db`. 이후 모든 Claude Code 세션에서
-SessionStart/UserPromptSubmit 시 관련 교정이 자동 주입되고, PreCompact 시 실수가 수확·검증된다.
-LLM 키는 `~/.qmem/.env`(`QWEN_API_KEY`)에서 로드한다(레포 개발 시 레포 `.env`도 폴백). 현재 macOS/launchd 기준.
+The daemon listens on `127.0.0.1:8787`; root memory lives at `~/.qmem/mem.db`. From then on,
+every Claude Code session auto-injects relevant fixes on SessionStart/UserPromptSubmit and
+harvests + verifies mistakes on PreCompact. The LLM key is loaded from `~/.qmem/.env`
+(`QWEN_API_KEY`; the repo `.env` is a fallback in dev). Currently macOS/launchd.
 
-### 개발 / 테스트
+### Develop / test
 
 ```bash
-uv sync && uv run pytest      # 52 tests (Seam1 데몬 HTTP API + Seam2 어댑터 contract)
-uv run python demo/run_demo.py   # 오프라인 크로스세션 데모 (네트워크 0)
+uv sync && uv run pytest      # 52 tests (Seam 1 daemon HTTP API + Seam 2 adapter contract)
+uv run python demo/run_demo.py   # offline cross-session demo (zero network)
 ```
-릴리스: `pyproject.toml` 버전 올리고 `git tag vX.Y.Z && git push origin vX.Y.Z` → GitHub Actions(OIDC)가 PyPI 발행.
+Release: bump version in `pyproject.toml`, then `git tag vX.Y.Z && git push origin vX.Y.Z` →
+GitHub Actions (OIDC) publishes to PyPI.
 
 ---
 
-## 데모 시나리오
+## Demo scenario
 
-1. **세션 1 (Claude Code)**: AI가 SQLAlchemy 2.0 async에서 sync Session 사용 → asyncpg
-   `another operation in progress` 에러 → compact가 수확 → 설치된 `sqlalchemy==2.x`를 뜯어
-   정답(AsyncSession+savepoint) 검증 → **lesson 저장**
-2. **재시작(크로스세션) → 세션 2**: 같은 작업 → SessionStart가 lesson 자동 주입 →
-   AI가 처음부터 올바르게 → **에러 0**
-3. 옛 lesson이 틀린 것으로 판명(또 터짐) → fail++ → confidence 하락 → **stale 도태**
-4. confidence 막대 시각화 → "학습 중" 증명
+1. **Session 1 (Claude Code)**: the agent uses a sync `Session` with SQLAlchemy 2.0 async →
+   asyncpg `another operation in progress` error → compaction harvests it → reads the installed
+   `sqlalchemy==2.x` and verifies the fix (AsyncSession + savepoint) → **lesson stored**.
+2. **Restart (cross-session) → Session 2**: same task → SessionStart auto-injects the lesson →
+   the agent gets it right from the start → **zero errors**.
+3. An old lesson turns out wrong (errors again) → fail++ → confidence drops → **stale / archived**.
+4. Confidence bars visualize "it's learning".
 
 ---
 
-## 참고
+## References
 
-- omp 메모리 설계: https://github.com/can1357/oh-my-pi/blob/main/docs/memory.md
+- omp memory design: https://github.com/can1357/oh-my-pi/blob/main/docs/memory.md
 - Hermes Agent: https://yuv.ai/blog/hermes-agent
 - prior art: [claude-mem](https://github.com/thedotmack/claude-mem) · [agentmemory](https://github.com/rohitg00/agentmemory) · [context-mode](https://github.com/mksglu/context-mode) · [ruler](https://github.com/intellectronica/ruler)
-- "Hindsight is 20/20" (arxiv 2512.12818): https://arxiv.org/abs/2512.12818
+- "Hindsight is 20/20" (arXiv 2512.12818): https://arxiv.org/abs/2512.12818
 - Qwen Cloud Hackathon: https://qwencloud-hackathon.devpost.com/

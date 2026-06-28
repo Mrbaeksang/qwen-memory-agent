@@ -21,7 +21,7 @@ def test_score_bar_rises_with_success():
     succeeded = {**base, "success_count": 5}
 
     assert score(succeeded) > score(base)
-    assert render_score_bars([succeeded])  # 렌더 가능
+    assert render_score_bars([succeeded])  # renders
 
 
 def test_render_confidence_bars_lists_each_lesson():
@@ -33,12 +33,12 @@ def test_render_confidence_bars_lists_each_lesson():
 
 
 def test_scenario_session2_recalls_what_session1_learned(tmp_path):
-    # 설치 패키지 픽스처
+    # installed-package fixture
     pkg = tmp_path / "node_modules" / "redis"
     pkg.mkdir(parents=True)
     (pkg / "package.json").write_text(json.dumps({"name": "redis", "version": "5.0.0"}))
     (pkg / "README.md").write_text("use redis.asyncio")
-    # 프로젝트 매니페스트 (세션2가 읽을 의존성)
+    # project manifest (the deps session 2 will read)
     (tmp_path / "package.json").write_text(json.dumps({"dependencies": {"redis": "^5"}}))
 
     store = LessonStore(tmp_path / "mem.db")
@@ -56,6 +56,6 @@ def test_scenario_session2_recalls_what_session1_learned(tmp_path):
     )
 
     assert len(result["created"]) == 1
-    assert "redis.asyncio" in result["session2_on"]   # ON: 학습한 교정 주입됨
-    assert result["session2_off"] == ""               # OFF: 주입 없음
+    assert "redis.asyncio" in result["session2_on"]   # ON: learned fix is injected
+    assert result["session2_off"] == ""               # OFF: no injection
     assert result["session2_on"] != result["session2_off"]

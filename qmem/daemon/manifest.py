@@ -1,4 +1,4 @@
-"""프로젝트 매니페스트에서 의존성 이름을 추출 (주입 대상 선정용)."""
+"""Extract dependency names from project manifests (to pick injection targets)."""
 
 import json
 import re

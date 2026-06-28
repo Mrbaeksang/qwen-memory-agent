@@ -1,7 +1,7 @@
-"""오프라인 데모 — `python demo/run_demo.py` (fake provider, 네트워크 0).
+"""Offline demo — `python demo/run_demo.py` (fake provider, zero network).
 
-세션1에서 라이브러리 실수를 수확·검증해 Lesson을 만들고, 세션2(크로스세션)에서
-자동 주입되는 것을 ON/OFF로 대비한다. confidence 막대로 자가 교정을 시각화한다.
+Session 1 harvests + verifies a library mistake into a Lesson; session 2 (cross-session)
+shows it auto-injected, contrasted ON vs OFF. Score bars visualize self-correction.
 """
 
 import json
@@ -35,25 +35,25 @@ def main() -> None:
 
     result = run_scenario(store, provider, str(tmp), "used redis\nError: blocking call in async")
 
-    print("=== 세션 1 — 수확·검증된 Lesson ===")
+    print("=== Session 1 — harvested & verified Lesson ===")
     for lesson in result["created"]:
-        print(f"  {lesson['trigger']}  →  {lesson['right']}")
+        print(f"  {lesson['trigger']}  ->  {lesson['right']}")
 
-    print("\n=== 세션 2 (크로스세션) — 메모리 ON vs OFF ===")
-    print(f"  OFF: (주입 없음) → 같은 실수 반복 위험")
+    print("\n=== Session 2 (cross-session) — memory ON vs OFF ===")
+    print("  OFF: (no injection) -> risk of repeating the same mistake")
     print(f"  ON :\n{result['session2_on']}")
 
     lesson_id = result["created"][0]["id"]
-    print("\n=== 자가 교정 — score 막대 (성공↑ / 실패↓) ===")
-    print("초기:")
+    print("\n=== Self-correction — score bars (success↑ / fail↓) ===")
+    print("initial:")
     print(render_score_bars(store.list_all()))
     for _ in range(3):
         apply_result(store, lesson_id, success=True)
-    print("성공 3회 후:")
+    print("after 3 successes:")
     print(render_score_bars(store.list_all()))
     for _ in range(5):
         apply_result(store, lesson_id, success=False)
-    print("이후 실패 5회 후 (틀린 교훈 도태):")
+    print("then after 5 failures (wrong lesson demoted):")
     print(render_score_bars(store.list_all()))
 
 

@@ -1,0 +1,35 @@
+%% Qwen MemoryAgent — architecture (paste into https://mermaid.live to export PNG)
+flowchart TB
+    subgraph HOSTS["Coding agent hosts (decisions happen here; no manual calls)"]
+        CC["Claude Code"]
+        OTH["Codex / Gemini CLI / Cursor (roadmap)"]
+    end
+
+    subgraph ADAPTER["Adapter layer (thin hook shims)"]
+        HK["qmem hook<br/>SessionStart · UserPromptSubmit<br/>PreCompact · SessionEnd"]
+    end
+
+    subgraph DAEMON["Local daemon — FastAPI (127.0.0.1:8787)"]
+        REC["Recall / Inject<br/>(session-once)"]
+        HAR["Harvest<br/>(PreCompact, async)"]
+        VER["Verifier<br/>A: read installed package<br/>B: web search fallback"]
+        REF["Reflect<br/>score · archive"]
+        DB[("Root memory<br/>SQLite + FTS5<br/>~/.qmem/mem.db")]
+    end
+
+    QWEN["Qwen Cloud — DashScope (OpenAI-compatible)<br/>qwen-turbo · qwen-plus (+enable_search) · qwen3-rerank"]
+    DISK["Installed packages on disk<br/>node_modules / site-packages"]
+
+    CC -- "lifecycle hooks (stdin/stdout)" --> HK
+    OTH -. "future" .-> HK
+    HK -- "HTTP events / context" --> REC
+    HK -- "transcript + cwd" --> HAR
+
+    REC --> DB
+    REC -- "rerank candidates" --> QWEN
+    HAR --> VER
+    VER -- "read version + docs" --> DISK
+    VER -- "synthesize lesson" --> QWEN
+    VER --> DB
+    REF --> DB
+    REC -- "additionalContext" --> HK

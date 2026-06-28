@@ -1,11 +1,11 @@
-"""PreCompact harvest — transcript + 에러 신호에서 사용법 실수 후보 추출."""
+"""PreCompact harvest — extract usage-mistake candidates from transcript + error signals."""
 
 import json
 from pathlib import Path
 
 ERROR_MARKERS = ("Error", "Traceback", "Exception", "error:")
 
-# 토큰 폭주 방지: 긴 세션(최대 1M)의 전체 transcript를 보내지 않고 최근 꼬리만.
+# avoid token blowups: don't send a long session's (up to 1M) full transcript, only the recent tail
 MAX_TRANSCRIPT_CHARS = 16000
 
 HARVEST_INSTRUCTION = (
@@ -36,7 +36,7 @@ def extract_errors(transcript_text: str) -> list[str]:
 
 
 def _slice_json_array(raw: str) -> str:
-    """실제 LLM이 ```json 펜스나 산문으로 감싸 주는 경우를 견뎌 배열만 추출."""
+    """Tolerate real LLMs wrapping output in ```json fences or prose — extract just the array."""
     start, end = raw.find("["), raw.rfind("]")
     return raw[start : end + 1] if start != -1 and end > start else raw
 

@@ -1,7 +1,8 @@
-"""설치/제거 로직 — Claude Code 훅 와이어링 + launchd 데몬 (qmem install/uninstall/status).
+"""Install/uninstall logic — Claude Code hook wiring + launchd daemon (qmem install/uninstall/status).
 
-PyPI 설치(`uv tool install qwen-memory-agent`)든 레포(`uv run qmem install`)든,
-PATH의 `qmem` 실행파일 절대경로를 찾아 훅·데몬이 그걸 가리키게 한다.
+Whether installed from PyPI (`uv tool install qwen-memory-agent`) or the repo
+(`uv run qmem install`), resolve the on-PATH `qmem` executable's absolute path and point the
+hooks and daemon at it.
 """
 
 import json
@@ -40,7 +41,7 @@ def _ensure_env() -> None:
             "QWEN_MODEL_INLINE=qwen-plus\n"
             "QWEN_MODEL_REVIEW=qwen-turbo\n"
         )
-        print(f"  ! {target} 에 QWEN_API_KEY 를 채워주세요")
+        print(f"  ! fill in QWEN_API_KEY at {target}")
 
 
 def _wire_hooks(cmd: str) -> None:
@@ -51,7 +52,7 @@ def _wire_hooks(cmd: str) -> None:
     hooks = settings.setdefault("hooks", {})
     hook_cmd = f'"{cmd}" hook'
     for event in HOOK_EVENTS:
-        # 기존 qmem 엔트리 제거 후 재추가(경로 변경/구버전 정리), 타 훅은 보존
+        # drop existing qmem entries then re-add (handles path changes / old versions); keep other hooks
         groups = [g for g in hooks.get(event, []) if "qmem" not in json.dumps(g)]
         groups.append({"hooks": [{"type": "command", "command": hook_cmd}]})
         hooks[event] = groups
@@ -114,10 +115,10 @@ def install() -> None:
     time.sleep(2)
     code = _health()
     if code == 200:
-        print(f"✅ 설치 완료 — daemon http://127.0.0.1:{port()} (HTTP {code})")
-        print(f"   메모리: {QMEM_HOME / 'mem.db'} | 로그: {QMEM_HOME / 'daemon.log'}")
+        print(f"installed — daemon http://127.0.0.1:{port()} (HTTP {code})")
+        print(f"   memory: {QMEM_HOME / 'mem.db'} | log: {QMEM_HOME / 'daemon.log'}")
     else:
-        print(f"⚠️  데몬 응답 없음 — {QMEM_HOME / 'daemon.log'} 확인")
+        print(f"!  daemon not responding — check {QMEM_HOME / 'daemon.log'}")
         sys.exit(1)
 
 
@@ -127,8 +128,8 @@ def uninstall() -> None:
     bak = SETTINGS.with_name("settings.json.qmem-bak")
     if bak.exists():
         shutil.copy(bak, SETTINGS)
-        print(f"settings.json 백업 복원: {bak}")
-    print("✅ 제거 완료 (메모리 ~/.qmem 보존; 완전삭제: rm -rf ~/.qmem)")
+        print(f"settings.json restored from backup: {bak}")
+    print("uninstalled (memory ~/.qmem kept; wipe with: rm -rf ~/.qmem)")
 
 
 def status() -> None:
@@ -144,4 +145,4 @@ def status() -> None:
     if SETTINGS.exists():
         hooks = json.loads(SETTINGS.read_text() or "{}").get("hooks", {})
         wired = [e for e in HOOK_EVENTS if any("qmem" in json.dumps(g) for g in hooks.get(e, []))]
-    print(f"hooks  : {', '.join(wired) if wired else '(없음)'}")
+    print(f"hooks  : {', '.join(wired) if wired else '(none)'}")

@@ -1,4 +1,4 @@
-"""Verify-A — 설치 패키지를 읽어 버전-정확한 Lesson을 합성하고 저장."""
+"""Verify-A — read the installed package to synthesize and store a version-exact Lesson."""
 
 from qmem.verify.package_reader import read_installed_package
 
@@ -14,7 +14,7 @@ WEB_INSTRUCTION = (
 
 
 def verify_b(candidate: dict, provider) -> dict | None:
-    """Verify-A가 디스크에서 못 찾을 때 웹서치 폴백. 미지원 프로바이더는 degrade(None)."""
+    """Web-search fallback when Verify-A can't find it on disk. Unsupported providers degrade (None)."""
     if not provider.supports_web_search:
         return None
     prompt = (
@@ -59,6 +59,6 @@ def verify_and_store(candidates: list[dict], search_paths: list, provider, store
     for cand in candidates:
         lesson = verify_a(cand, search_paths, provider) or verify_b(cand, provider)
         if lesson is not None:
-            store.supersede(lesson["trigger"])  # 모순/갱신: 같은 trigger 옛것 stale
+            store.supersede(lesson["trigger"])  # contradiction/update: stale older same-trigger lessons
             created.append(store.create(lesson))
     return created

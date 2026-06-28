@@ -13,7 +13,7 @@ async def test_post_lesson_stores_and_fills_defaults(client):
     assert body["trigger"] == payload["trigger"]
     assert body["wrong"] == payload["wrong"]
     assert body["right"] == payload["right"]
-    # 기본값이 채워진다
+    # defaults are filled in
     assert body["confidence"] == 0.7
     assert body["use_count"] == 0
     assert body["success_count"] == 0
@@ -54,7 +54,7 @@ async def test_list_lessons_returns_all_stored(client):
 
 
 async def test_post_without_required_trigger_is_rejected(client):
-    # trigger 누락 — 검증 단계에서 막혀야 하고 서버가 죽지 않는다(fail-safe)
+    # missing trigger — must be rejected at validation and the server must not crash (fail-safe)
     resp = await client.post("/lessons", json={"right": "some fix"})
 
     assert resp.status_code == 422

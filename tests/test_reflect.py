@@ -41,5 +41,5 @@ async def test_repeated_failures_archive_and_drop_from_recall(client):
 
 
 def test_reliability_moves_both_directions():
-    # 성공은 올리고 실패는 내린다 (신규 0.5에서 출발)
+    # success raises, failure lowers (starting from 0.5 for a new lesson)
     assert reliability(3, 0) > reliability(0, 0) > reliability(0, 3)

@@ -1,6 +1,6 @@
-"""엔드투엔드 데모 — 세션1 실수 수확→Lesson, 세션2 크로스세션 주입.
+"""End-to-end demo — session 1 harvests a mistake → Lesson, session 2 injects it cross-session.
 
-메모리 ON/OFF 대비로 "쓸수록 정확해짐"을 보여준다.
+Contrasts memory ON/OFF to show "more accurate with use".
 """
 
 from qmem.daemon.harvest import harvest
@@ -10,15 +10,15 @@ from qmem.verify.verifier import verify_and_store
 
 
 def run_scenario(store, provider, project_dir: str, transcript_text: str) -> dict:
-    # 세션 1: PreCompact 수확 + Verify-A → Lesson 저장
+    # session 1: PreCompact harvest + Verify-A → store Lesson
     candidates = harvest(transcript_text, provider)
     created = verify_and_store(candidates, [project_dir], provider, store)
 
-    # 세션 2 (재시작/크로스세션): SessionStart 프리로드 주입
+    # session 2 (restart / cross-session): SessionStart preload injection
     deps = read_dependencies(project_dir)
     lessons = recall_for_deps(store, deps)
     session2_on = build_context(lessons)
-    session2_off = ""  # 메모리 비활성 시 주입 없음
+    session2_off = ""  # no injection when memory is disabled
 
     return {
         "created": created,

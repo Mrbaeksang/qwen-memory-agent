@@ -7,7 +7,7 @@ from qmem.daemon.app import create_app
 
 @pytest_asyncio.fixture
 async def client(tmp_path):
-    """데몬 HTTP API(Seam 1)에 임시 SQLite로 격리해 접근하는 클라이언트."""
+    """Client to the daemon HTTP API (Seam 1), isolated with a temp SQLite db."""
     app = create_app(db_path=tmp_path / "mem.db")
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -16,7 +16,7 @@ async def client(tmp_path):
 
 @pytest.fixture
 def make_client(tmp_path):
-    """provider를 주입한 클라이언트를 만드는 팩토리 (async with 로 사용)."""
+    """Factory that builds a client with an injected provider (use via async with)."""
 
     def _make(provider=None):
         app = create_app(db_path=tmp_path / "mem.db", provider=provider)

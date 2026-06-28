@@ -1,4 +1,4 @@
-"""런타임 설정 — .env 로딩, 루트 메모리 경로, Qwen provider 구성."""
+"""Runtime config — .env loading, root-memory path, Qwen provider construction."""
 
 import os
 from pathlib import Path
@@ -18,7 +18,7 @@ def _apply_env_file(path: Path) -> None:
 
 
 def load_dotenv(path: Path | None = None) -> None:
-    """첫 번째로 존재하는 .env 를 로드: ~/.qmem/.env → 레포 .env → cwd/.env."""
+    """Load the first .env that exists: ~/.qmem/.env → repo .env → cwd/.env."""
     candidates = [path] if path else [QMEM_HOME / ".env", PROJECT_ROOT / ".env", Path.cwd() / ".env"]
     for candidate in candidates:
         if candidate and candidate.exists():
@@ -36,7 +36,7 @@ def port() -> int:
 
 
 def build_provider():
-    """환경변수에서 Qwen provider를 구성 (키 없으면 그대로, 호출 시 실패)."""
+    """Build a Qwen provider from env vars (no key → constructs anyway, fails on call)."""
     from qmem.llm.provider import QwenProvider
 
     return QwenProvider(

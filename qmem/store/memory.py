@@ -1,4 +1,4 @@
-"""루트 메모리 저장소 — Lesson 레코드의 SQLite 영속화 + FTS5 회상."""
+"""Root memory store — SQLite persistence of Lesson records + FTS5 recall."""
 
 import re
 import sqlite3
@@ -16,7 +16,7 @@ def _now() -> str:
 
 
 def _fts_query(query: str) -> str:
-    """사용자 입력을 안전한 FTS5 MATCH 식으로 변환 (토큰 OR 결합)."""
+    """Turn user input into a safe FTS5 MATCH expression (OR-join tokens)."""
     terms = re.findall(r"[A-Za-z0-9_]+", query)
     return " OR ".join(f'"{t}"' for t in terms)
 
@@ -105,7 +105,7 @@ class LessonStore:
         self._conn.commit()
 
     def supersede(self, trigger: str) -> None:
-        """같은 trigger의 기존 활성 Lesson을 stale 처리(새 검증이 옛것을 대체)."""
+        """Mark existing active lessons with the same trigger stale (new verification supersedes old)."""
         self._conn.execute(
             "UPDATE lessons SET stale = 1 WHERE trigger = ? AND stale = 0", (trigger,)
         )
@@ -118,7 +118,7 @@ class LessonStore:
         self._conn.commit()
 
     def apply_outcome(self, lesson_id: str, success: bool) -> dict | None:
-        """결과 신호를 반영: success/fail 카운트와 last_used 갱신."""
+        """Apply an outcome signal: bump success/fail counts and last_used."""
         col = "success_count" if success else "fail_count"
         self._conn.execute(
             f"UPDATE lessons SET {col} = {col} + 1, use_count = use_count + 1, "

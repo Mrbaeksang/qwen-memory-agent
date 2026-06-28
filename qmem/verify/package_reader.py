@@ -1,4 +1,4 @@
-"""설치된 패키지를 디스크에서 직접 읽어 버전·문서를 얻는다 (Verify-A 정답 출처)."""
+"""Read the installed package directly from disk for version + docs (Verify-A's source of truth)."""
 
 import json
 from pathlib import Path

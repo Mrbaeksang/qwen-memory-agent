@@ -49,4 +49,4 @@ def test_build_context_respects_char_budget():
     ctx = build_context(lessons, budget=300)
 
     assert len(ctx) <= 300
-    assert ctx.count("[Memory") < 50  # 전부 들어가지 않음
+    assert ctx.count("[Memory") < 50  # not all of them fit

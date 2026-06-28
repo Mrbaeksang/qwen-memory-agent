@@ -1,4 +1,4 @@
-"""데몬 진입점 — `python -m qmem` 로 루트 메모리 데몬을 띄운다."""
+"""Daemon entrypoint — `python -m qmem` starts the root-memory daemon."""
 
 import uvicorn
 

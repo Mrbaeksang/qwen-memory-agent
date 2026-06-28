@@ -1,10 +1,10 @@
-"""회상 점수 — score = confidence × recency_decay × reliability.
+"""Recall score — score = confidence × recency_decay × reliability.
 
-reliability는 문서의 success/(success+fail+1) 대신 Beta(1,1) 평활인
-(success+1)/(success+fail+2)를 쓴다. 원식은 신규 lesson(success=0)에서 0이 되어
-갓 수확한 교훈이 영영 회상되지 않는 퇴화가 있다. 평활식은 신규=0.5에서 출발해
-성공 누적 시 1.0으로 상승, 실패 누적 시 0.0으로 하락 — 양방향으로 움직여
-"쓸수록 정확해짐"을 점수로 드러낸다.
+reliability uses Beta(1,1) smoothing (success+1)/(success+fail+2) instead of the naive
+success/(success+fail+1). The naive form degenerates to 0 for a new lesson (success=0),
+so a freshly harvested lesson would never be recalled. The smoothed form starts at 0.5,
+rises toward 1.0 with successes and falls toward 0.0 with failures — moving both ways so
+"more accurate with use" shows up in the score.
 """
 
 from datetime import datetime, timezone

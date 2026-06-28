@@ -1,10 +1,10 @@
-"""qmem 콘솔 CLI — `qmem <command>`.
+"""qmem console CLI — `qmem <command>`.
 
-  qmem install     훅 와이어링 + launchd 데몬 기동 (설치)
-  qmem uninstall   데몬 중지 + 설정 백업 복원
-  qmem status      데몬/메모리/훅 상태
-  qmem daemon      데몬 프로세스 실행 (launchd가 호출)
-  qmem hook        Claude Code 훅 어댑터 (훅이 호출, stdin→stdout)
+  qmem install     wire hooks + start the launchd daemon (install)
+  qmem uninstall   stop the daemon + restore the settings backup
+  qmem status      daemon / memory / hooks status
+  qmem daemon      run the daemon process (invoked by launchd)
+  qmem hook        Claude Code hook adapter (invoked by hooks, stdin->stdout)
 """
 
 import sys

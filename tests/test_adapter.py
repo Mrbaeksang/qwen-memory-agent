@@ -6,7 +6,7 @@ from qmem.adapters.claude_code import run
 
 
 def test_adapter_module_runs_as_main_failsafe():
-    # __main__ 가드가 연결돼 있어야 `-m` 실행이 동작한다 (회귀 방지)
+    # the __main__ guard must be wired for `-m` execution to work (regression guard)
     proc = subprocess.run(
         [sys.executable, "-m", "qmem.adapters.claude_code"],
         input="not json",
@@ -41,7 +41,7 @@ def test_session_start_injects_additional_context():
     body = json.loads(result.stdout)
     assert body["hookSpecificOutput"]["hookEventName"] == "SessionStart"
     assert body["hookSpecificOutput"]["additionalContext"] == "use AsyncSession"
-    # 표준 이벤트로 변환되어 POST 됨
+    # converted to a standard event and POSTed
     assert post.calls[0][0] == "/events"
     assert post.calls[0][1]["event"] == "SessionStart"
     assert post.calls[0][1]["session_id"] == "s1"

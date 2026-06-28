@@ -31,7 +31,7 @@ def test_harvest_empty_transcript_skips_provider():
     provider = FakeProvider(completion="[]")
 
     assert harvest("   ", provider) == []
-    assert provider.calls == []  # 빈 transcript면 LLM 호출 안 함
+    assert provider.calls == []  # empty transcript → no LLM call
 
 
 def test_extract_errors_finds_error_lines():

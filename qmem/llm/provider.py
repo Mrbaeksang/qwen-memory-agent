@@ -1,7 +1,7 @@
-"""LLM Provider 추상화 — OpenAI 호환, Qwen 기본값 + 테스트용 fake.
+"""LLM Provider abstraction — OpenAI-compatible, Qwen by default + a test fake.
 
-비-Qwen 프로바이더는 rerank/웹서치 미지원 시 graceful degrade한다:
-rerank는 항등 순서(FTS score만)로, web_search는 비활성으로 떨어진다.
+Non-Qwen providers degrade gracefully when rerank/web-search is unsupported:
+rerank falls back to identity order (FTS score only), web_search is disabled.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ class Provider(ABC):
         ...
 
     def rerank(self, query: str, documents: list[str], top_n: int | None = None) -> list[int]:
-        """기본 degrade — 항등 순서(원래 순서 유지)."""
+        """Default degrade — identity order (keep the original order)."""
         order = list(range(len(documents)))
         return order[:top_n] if top_n else order
 
@@ -102,7 +102,7 @@ class QwenProvider(Provider):
 
 
 class FakeProvider(Provider):
-    """테스트용 결정적 provider — 실 API 호출 0."""
+    """Deterministic provider for tests — zero real API calls."""
 
     def __init__(
         self,

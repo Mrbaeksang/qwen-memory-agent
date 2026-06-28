@@ -1,4 +1,4 @@
-"""Reflect — 결과 신호로 점수를 갱신하고 임계치 미만 Lesson을 archive(망각)."""
+"""Reflect — update scores from outcome signals and archive (forget) sub-threshold lessons."""
 
 from qmem.store.scoring import score
 

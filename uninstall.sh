@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# qmem 제거 — 데몬 중지 + plist 삭제 + ~/.claude/settings.json 백업 복원.
-# 메모리(~/.qmem)는 보존. 완전 삭제하려면: rm -rf ~/.qmem
+# qmem uninstall — stop the daemon, remove the plist, restore the settings.json backup.
+# Memory (~/.qmem) is kept. To wipe it entirely: rm -rf ~/.qmem
 set -uo pipefail
 
 LABEL="com.qmem.daemon"
@@ -9,13 +9,13 @@ BAK="$HOME/.claude/settings.json.qmem-bak"
 
 launchctl unload "$PLIST" 2>/dev/null || true
 rm -f "$PLIST"
-echo "데몬 중지 + plist 삭제"
+echo "daemon stopped + plist removed"
 
 if [ -f "$BAK" ]; then
   cp "$BAK" "$HOME/.claude/settings.json"
-  echo "settings.json 백업 복원: $BAK"
+  echo "settings.json restored from backup: $BAK"
 else
-  echo "백업 없음 — ~/.claude/settings.json 의 qmem 훅을 수동 제거하세요"
+  echo "no backup found — remove the qmem hooks from ~/.claude/settings.json manually"
 fi
 
-echo "✅ 제거 완료 (메모리 ~/.qmem 는 보존됨)"
+echo "uninstalled (memory ~/.qmem kept)"
