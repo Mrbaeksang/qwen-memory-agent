@@ -11,6 +11,7 @@ from qmem.daemon.manifest import read_dependencies
 from qmem.daemon.reflect import apply_result
 from qmem.llm.provider import QwenProvider
 from qmem.store.memory import LessonStore
+from qmem.verify.package_reader import default_search_paths
 from qmem.verify.verifier import verify_and_store
 
 
@@ -36,7 +37,7 @@ def create_app(db_path: str | Path, provider=None) -> FastAPI:
     def _harvest_job(transcript_path: str | None, cwd: str | None) -> None:
         candidates = harvest(read_transcript(transcript_path), provider)
         pending.extend(candidates)
-        verify_and_store(candidates, [cwd or "."], provider, store)
+        verify_and_store(candidates, default_search_paths(cwd or "."), provider, store)
 
     @app.post("/lessons", status_code=201)
     def create_lesson(lesson: LessonIn) -> dict:

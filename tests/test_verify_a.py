@@ -27,6 +27,17 @@ def test_read_missing_package_returns_none(tmp_path):
     assert read_installed_package("nope", [tmp_path]) is None
 
 
+def test_read_global_npm_layout(tmp_path):
+    # npm root -g layout: <root>/<tech>/package.json (no nested node_modules)
+    pkg = tmp_path / "context-mode"
+    pkg.mkdir()
+    (pkg / "package.json").write_text(json.dumps({"name": "context-mode", "version": "1.0.165"}))
+
+    result = read_installed_package("context-mode", [tmp_path])
+
+    assert result["version"] == "1.0.165"
+
+
 def test_verify_a_synthesizes_versioned_lesson(tmp_path):
     _make_node_pkg(tmp_path, "redis", "5.0.0", "use redis.asyncio")
     provider = FakeProvider(completion="Use redis.asyncio.Redis for async clients")
