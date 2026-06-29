@@ -33,6 +33,10 @@ The core isn't storage — it's **(1) mistake harvesting · (2) version-exact ve
 
 ## Architecture (summary — source of truth in [`CONTEXT.md`](./CONTEXT.md))
 
+![Qwen MemoryAgent architecture](docs/architecture.png)
+
+<details><summary>Mermaid source</summary>
+
 ```mermaid
 flowchart TB
     subgraph HOSTS["Coding agent hosts (no manual calls)"]
@@ -56,6 +60,7 @@ flowchart TB
     REC & VER & REF --> DB
     REC -- "additionalContext" --> CC
 ```
+</details>
 
 <details><summary>text version</summary>
 
