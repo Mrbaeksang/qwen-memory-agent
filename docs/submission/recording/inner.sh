@@ -40,7 +40,7 @@ say "4) Next session — the fix is auto-injected (host never calls a tool)"
 type_run "echo '{\"hook_event_name\":\"UserPromptSubmit\",\"session_id\":\"next\",\"prompt\":\"make a settings class with pydantic\"}' | qmem hook | python3 -m json.tool"
 
 say "5) Self-correction — score rises on success, falls on failure, wrong lessons get forgotten"
-type_run "python3 $REPO/demo/run_demo.py"
+type_run "\"$REPO/.venv/bin/python\" \"$REPO/demo/run_demo.py\""
 
 say "Open source  ·  pip install:  uv tool install qwen-memory-agent"
 sleep 2
